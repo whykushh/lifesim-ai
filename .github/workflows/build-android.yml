@@ -30,6 +30,10 @@ jobs:
         working-directory: ./mobile
         run: npm install --legacy-peer-deps
 
+      - name: Install React Native CLI
+        working-directory: ./mobile
+        run: npm install --save-dev @react-native-community/cli --legacy-peer-deps
+
       - name: Expo prebuild (generate Android project)
         working-directory: ./mobile
         run: npx expo prebuild --platform android --clean --no-install
