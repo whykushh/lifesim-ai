@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "LifeSim AI",
+    "slug": "lifesim-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0A0F"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0A0A0F"
+      },
+      "package": "com.whykushh.lifesimai"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "69dae625-6f3c-4428-a399-932bfdca5f35"
+      }
+    }
+  }
+}
