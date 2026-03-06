@@ -398,12 +398,22 @@ export interface DecisionOption {
   desc: string;
   decision: string;
   color: string;
+  darkColor: string;
 }
 
-const CARD_COLORS = [
-  '#7C3AED', '#D97706', '#059669', '#DB2777',
-  '#0284C7', '#C2410C', '#4338CA', '#B45309',
-  '#065F46', '#9D174D', '#075985', '#7E22CE',
+const CARD_PALETTE = [
+  { color: '#FF5722', darkColor: '#BF360C' },
+  { color: '#FF9800', darkColor: '#E65100' },
+  { color: '#4CAF50', darkColor: '#1B5E20' },
+  { color: '#2196F3', darkColor: '#0D47A1' },
+  { color: '#9C27B0', darkColor: '#4A148C' },
+  { color: '#E91E63', darkColor: '#880E4F' },
+  { color: '#00BCD4', darkColor: '#006064' },
+  { color: '#8BC34A', darkColor: '#33691E' },
+  { color: '#FF6F00', darkColor: '#BF360C' },
+  { color: '#3F51B5', darkColor: '#1A237E' },
+  { color: '#F44336', darkColor: '#B71C1C' },
+  { color: '#00ACC1', darkColor: '#006064' },
 ];
 
 const DECISION_POOL: Omit<DecisionOption, 'color'>[] = [
@@ -443,14 +453,13 @@ const DECISION_POOL: Omit<DecisionOption, 'color'>[] = [
 
 export function generateDecisionChoices(stats: Stats, exclude?: string): DecisionOption[] {
   let pool = DECISION_POOL.filter(d => d.decision !== exclude);
-  // Fisher-Yates shuffle
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
   const picked = pool.slice(0, 4);
-  const shuffledColors = [...CARD_COLORS].sort(() => Math.random() - 0.5);
-  return picked.map((d, i) => ({ ...d, color: shuffledColors[i % shuffledColors.length] }));
+  const shuffledPalette = [...CARD_PALETTE].sort(() => Math.random() - 0.5);
+  return picked.map((d, i) => ({ ...d, ...shuffledPalette[i % shuffledPalette.length] }));
 }
 
 // ─── Core Engine ──────────────────────────────────────────────────────────────
