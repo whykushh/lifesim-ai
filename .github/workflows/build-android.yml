@@ -15,6 +15,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
 
       - uses: actions/setup-java@v4
         with:
@@ -29,6 +31,24 @@ jobs:
         working-directory: ./mobile
         run: npx expo prebuild --platform android --clean --no-install
 
+      - name: Create assets directory
+        run: mkdir -p mobile/android/app/src/main/assets
+
+      - name: Bundle JS with expo export
+        working-directory: ./mobile
+        run: npx expo export --platform android --output-dir /tmp/expo-export
+
+      - name: Copy JS bundle into Android assets
+        run: |
+          BUNDLE=$(find /tmp/expo-export/_expo/static/js/android/ -name "*.hbc" -o -name "*.js" 2>/dev/null | head -1)
+          if [ -z "$BUNDLE" ]; then
+            echo "ERROR: No JS bundle found in expo export output"
+            ls -R /tmp/expo-export/ || true
+            exit 1
+          fi
+          echo "Copying bundle: $BUNDLE"
+          cp "$BUNDLE" mobile/android/app/src/main/assets/index.android.bundle
+
       - name: Generate keystore
         run: |
           keytool -genkeypair -v \
@@ -38,42 +58,67 @@ jobs:
             -dname "CN=LifeSim,O=LifeSim,C=US" \
             -storepass android123 -keypass android123
 
-      - name: Inject signing config into build.gradle
+      - name: Write signing properties
+        run: |
+          cat >> mobile/android/gradle.properties << 'EOF'
+          MYAPP_UPLOAD_STORE_FILE=/tmp/release.keystore
+          MYAPP_UPLOAD_KEY_ALIAS=release
+          MYAPP_UPLOAD_STORE_PASSWORD=android123
+          MYAPP_UPLOAD_KEY_PASSWORD=android123
+          EOF
+
+      - name: Inject signing config into app/build.gradle
         working-directory: ./mobile/android/app
         run: |
           python3 << 'PYEOF'
+          import re
+
           with open('build.gradle', 'r') as f:
               c = f.read()
-          signing = """
+
+          # Only inject if signing config is not already present
+          if 'MYAPP_UPLOAD_STORE_FILE' not in c:
+              signing_config = """
               signingConfigs {
                   release {
-                      storeFile file("/tmp/release.keystore")
-                      storePassword "android123"
-                      keyAlias "release"
-                      keyPassword "android123"
+                      storeFile file(MYAPP_UPLOAD_STORE_FILE)
+                      storePassword MYAPP_UPLOAD_STORE_PASSWORD
+                      keyAlias MYAPP_UPLOAD_KEY_ALIAS
+                      keyPassword MYAPP_UPLOAD_KEY_PASSWORD
                   }
               }
           """
-          c = c.replace('    buildTypes {', signing + '    buildTypes {', 1)
-          # inject signingConfig into release buildType
-          import re
-          c = re.sub(r'(buildTypes \{[^}]*release \{)', r'\1\n            signingConfig signingConfigs.release', c, count=1)
-          with open('build.gradle', 'w') as f:
-              f.write(c)
-          print("Done patching build.gradle")
+              # Insert signingConfigs block before buildTypes
+              c = c.replace('    buildTypes {', signing_config + '    buildTypes {', 1)
+
+              # Add signingConfig reference inside the release buildType block
+              c = re.sub(
+                  r'(release\s*\{)',
+                  r'\1\n            signingConfig signingConfigs.release',
+                  c,
+                  count=1
+              )
+
+              with open('build.gradle', 'w') as f:
+                  f.write(c)
+              print("Patched build.gradle with signing config")
+          else:
+              print("Signing config already present, skipping patch")
           PYEOF
 
       - name: Make gradlew executable
         working-directory: ./mobile/android
         run: chmod +x gradlew
 
-      - name: Build Release APK
+      - name: Build Debug APK (with pre-bundled JS)
         working-directory: ./mobile/android
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleDebug --no-daemon -PbundleInDebug=true
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: LifeSimAI.apk
-          path: mobile/android/app/build/outputs/apk/release/app-release.apk
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 7
