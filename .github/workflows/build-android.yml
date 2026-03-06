@@ -35,65 +35,13 @@ jobs:
         working-directory: ./mobile
         run: npx expo prebuild --platform android --clean --no-install
 
-      - name: Generate keystore
-        run: |
-          keytool -genkeypair -v \
-            -keystore /tmp/release.keystore \
-            -alias release \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=LifeSim,O=LifeSim,C=US" \
-            -storepass android123 -keypass android123
-
-      - name: Write signing properties
-        run: |
-          cat >> mobile/android/gradle.properties << 'EOF'
-          MYAPP_UPLOAD_STORE_FILE=/tmp/release.keystore
-          MYAPP_UPLOAD_KEY_ALIAS=release
-          MYAPP_UPLOAD_STORE_PASSWORD=android123
-          MYAPP_UPLOAD_KEY_PASSWORD=android123
-          EOF
-
-      - name: Inject signing config into app/build.gradle
-        working-directory: ./mobile/android/app
-        run: |
-          python3 << 'PYEOF'
-          import re
-
-          with open('build.gradle', 'r') as f:
-              c = f.read()
-
-          if 'MYAPP_UPLOAD_STORE_FILE' not in c:
-              signing_config = """
-              signingConfigs {
-                  release {
-                      storeFile file(MYAPP_UPLOAD_STORE_FILE)
-                      storePassword MYAPP_UPLOAD_STORE_PASSWORD
-                      keyAlias MYAPP_UPLOAD_KEY_ALIAS
-                      keyPassword MYAPP_UPLOAD_KEY_PASSWORD
-                  }
-              }
-          """
-              c = c.replace('    buildTypes {', signing_config + '    buildTypes {', 1)
-              c = re.sub(
-                  r'(release\s*\{)',
-                  r'\1\n            signingConfig signingConfigs.release',
-                  c,
-                  count=1
-              )
-              with open('build.gradle', 'w') as f:
-                  f.write(c)
-              print("Patched build.gradle with signing config")
-          else:
-              print("Signing config already present, skipping patch")
-          PYEOF
-
       - name: Make gradlew executable
         working-directory: ./mobile/android
         run: chmod +x gradlew
 
       - name: Build Debug APK
         working-directory: ./mobile/android
-        run: ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/gradle-build.log; exit ${PIPESTATUS[0]}
+        run: ./gradlew assembleDebug --no-daemon 2>&1 | tee /tmp/gradle-build.log; exit ${PIPESTATUS[0]}
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g"
 
@@ -108,6 +56,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: LifeSimAI.apk
+          name: LifeSimAI-debug.apk
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 7
