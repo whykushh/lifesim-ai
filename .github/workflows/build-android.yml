@@ -93,9 +93,17 @@ jobs:
 
       - name: Build Debug APK
         working-directory: ./mobile/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/gradle-build.log; exit ${PIPESTATUS[0]}
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g"
+
+      - name: Upload build log (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: /tmp/gradle-build.log
+          retention-days: 3
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
