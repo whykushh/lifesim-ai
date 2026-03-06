@@ -65,7 +65,6 @@ export default function SimulationScreen({ navigation }: Props) {
           </View>
         </View>
         <View style={styles.headerBtns}>
-          {(['📊','Stats'] as const), (['📜','Timeline'] as const), (['⚙️','Settings'] as const)}
           {[{ icon:'📊', s:'Stats' }, { icon:'📜', s:'Timeline' }, { icon:'⚙️', s:'Settings' }].map(({ icon, s }) => (
             <Pressable key={s} onPress={() => navigation.navigate(s as any)} style={styles.headerBtn}>
               <Text style={styles.headerBtnIcon}>{icon}</Text>
