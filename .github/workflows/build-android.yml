@@ -112,7 +112,7 @@ jobs:
 
       - name: Build Debug APK (with pre-bundled JS)
         working-directory: ./mobile/android
-        run: ./gradlew assembleDebug --no-daemon -PbundleInDebug=true
+        run: ./gradlew assembleDebug --no-daemon -x createBundleDebugJsAndAssets
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g"
 
