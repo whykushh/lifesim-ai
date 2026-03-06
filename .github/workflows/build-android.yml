@@ -39,9 +39,9 @@ jobs:
         working-directory: ./mobile/android
         run: chmod +x gradlew
 
-      - name: Build Debug APK
+      - name: Build Debug APK (with bundled JS)
         working-directory: ./mobile/android
-        run: ./gradlew assembleDebug --no-daemon 2>&1 | tee /tmp/gradle-build.log; exit ${PIPESTATUS[0]}
+        run: ./gradlew assembleDebug --no-daemon -PbundleInDebug=true 2>&1 | tee /tmp/gradle-build.log; exit ${PIPESTATUS[0]}
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g"
 
