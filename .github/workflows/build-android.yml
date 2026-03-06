@@ -27,27 +27,13 @@ jobs:
         working-directory: ./mobile
         run: npm install --legacy-peer-deps
 
+      - name: Install React Native CLI
+        working-directory: ./mobile
+        run: npm install --save-dev @react-native-community/cli @react-native-community/cli-platform-android --legacy-peer-deps
+
       - name: Expo prebuild
         working-directory: ./mobile
         run: npx expo prebuild --platform android --clean --no-install
-
-      - name: Create assets directory
-        run: mkdir -p mobile/android/app/src/main/assets
-
-      - name: Bundle JS with expo export
-        working-directory: ./mobile
-        run: npx expo export --platform android --output-dir /tmp/expo-export
-
-      - name: Copy JS bundle into Android assets
-        run: |
-          BUNDLE=$(find /tmp/expo-export/_expo/static/js/android/ -name "*.hbc" -o -name "*.js" 2>/dev/null | head -1)
-          if [ -z "$BUNDLE" ]; then
-            echo "ERROR: No JS bundle found in expo export output"
-            ls -R /tmp/expo-export/ || true
-            exit 1
-          fi
-          echo "Copying bundle: $BUNDLE"
-          cp "$BUNDLE" mobile/android/app/src/main/assets/index.android.bundle
 
       - name: Generate keystore
         run: |
@@ -76,7 +62,6 @@ jobs:
           with open('build.gradle', 'r') as f:
               c = f.read()
 
-          # Only inject if signing config is not already present
           if 'MYAPP_UPLOAD_STORE_FILE' not in c:
               signing_config = """
               signingConfigs {
@@ -88,17 +73,13 @@ jobs:
                   }
               }
           """
-              # Insert signingConfigs block before buildTypes
               c = c.replace('    buildTypes {', signing_config + '    buildTypes {', 1)
-
-              # Add signingConfig reference inside the release buildType block
               c = re.sub(
                   r'(release\s*\{)',
                   r'\1\n            signingConfig signingConfigs.release',
                   c,
                   count=1
               )
-
               with open('build.gradle', 'w') as f:
                   f.write(c)
               print("Patched build.gradle with signing config")
@@ -110,9 +91,9 @@ jobs:
         working-directory: ./mobile/android
         run: chmod +x gradlew
 
-      - name: Build Debug APK (with pre-bundled JS)
+      - name: Build Debug APK
         working-directory: ./mobile/android
-        run: ./gradlew assembleDebug --no-daemon -x createBundleDebugJsAndAssets
+        run: ./gradlew assembleDebug --no-daemon
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g"
 
